@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useStartup } from '../context/StartupContext';
 import Navbar from '../components/Navbar';
 import InputField from '../components/InputField';
-import { Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
+import { signInUser } from '../services/authService';
 
 const Login = () => {
   const { loginUser, isLoggedIn, setLoading } = useStartup();
@@ -22,6 +23,7 @@ const Login = () => {
     password: '',
   });
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,24 +62,26 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     setIsSubmitting(true);
-    setLoading(true); // show LoadingOverlay
+    setLoading(true);
+    setSubmitError('');
 
-    // Simulate small latency
-    setTimeout(() => {
-      // Mock login: use name derived from email or default
-      const mockName = formData.email.split('@')[0];
-      const capitalizedName = mockName.charAt(0).toUpperCase() + mockName.slice(1);
-      
-      loginUser(formData.email, formData.password, capitalizedName);
+    try {
+      const data = await signInUser(formData.email, formData.password);
+      const fullName = data.user?.user_metadata?.full_name ||
+        formData.email.split('@')[0].replace(/^./, c => c.toUpperCase());
+      loginUser(formData.email, formData.password, fullName);
+      navigate('/dashboard');
+    } catch (err) {
+      setSubmitError(err.message || 'Invalid email or password.');
+    } finally {
       setLoading(false);
       setIsSubmitting(false);
-      navigate('/dashboard');
-    }, 1000);
+    }
   };
 
   return (
@@ -140,6 +144,14 @@ const Login = () => {
                 </div>
               </div>
             </div>
+
+            {/* Auth Error */}
+            {submitError && (
+              <div className="flex items-center gap-2 rounded-xl border border-rose-500/20 bg-rose-500/5 px-4 py-3 text-sm text-rose-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {submitError}
+              </div>
+            )}
 
             {/* Submit */}
             <div>

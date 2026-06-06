@@ -10,7 +10,7 @@ import {
   RefreshCw, 
   Save, 
   ShieldAlert, 
-  Moon, 
+  Moon,
   Sparkles 
 } from 'lucide-react';
 
@@ -21,28 +21,24 @@ const Settings = () => {
     resetSettingsDefaults, 
     clearDraft, 
     clearHistory, 
-    loadingState 
+    loadingState
   } = useStartup();
   
   const { showToast } = useToast();
 
   // Local Form state initialized from global settings context
   const [formData, setFormData] = useState({
-    themeMode: settings.themeMode || 'Dark',
     theme: settings.theme || 'Dark Futurism', // persistent theme key
     notificationsEnabled: settings.notificationsEnabled !== false,
     autoSaveDrafts: settings.autoSaveDrafts !== false,
-    analysisPreference: settings.analysisPreference || 'Comprehensive',
   });
 
   // Keep local state in sync if settings changes (like during a reset)
   useEffect(() => {
     setFormData({
-      themeMode: settings.themeMode || 'Dark',
       theme: settings.theme || 'Dark Futurism',
       notificationsEnabled: settings.notificationsEnabled !== false,
       autoSaveDrafts: settings.autoSaveDrafts !== false,
-      analysisPreference: settings.analysisPreference || 'Comprehensive',
     });
   }, [settings]);
 
@@ -108,84 +104,72 @@ const Settings = () => {
               </div>
 
               {/* Theme Preview Cards (3 Grid) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {[
-                  {
-                    name: 'Dark Futurism',
-                    desc: 'Deep indigo & cyan neon grids',
-                    colors: ['bg-indigo-500', 'bg-cyan-400'],
-                    borderClass: 'border-indigo-500/10 hover:border-indigo-500/30',
-                    activeBorder: 'border-indigo-500 bg-indigo-950/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
-                  },
-                  {
-                    name: 'Midnight Blue',
-                    desc: 'Cobalt base with sky blue layers',
-                    colors: ['bg-blue-600', 'bg-sky-400'],
-                    borderClass: 'border-blue-500/10 hover:border-blue-500/30',
-                    activeBorder: 'border-blue-500 bg-blue-950/20 shadow-[0_0_20px_rgba(59,130,246,0.15)]'
-                  },
-                  {
-                    name: 'Neo Emerald',
-                    desc: 'Forest base with seafoam emeralds',
-                    colors: ['bg-emerald-500', 'bg-teal-400'],
-                    borderClass: 'border-emerald-500/10 hover:border-emerald-500/30',
-                    activeBorder: 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
-                  }
-                ].map((t) => {
-                  const isActive = formData.theme === t.name;
-                  return (
-                    <div
-                      key={t.name}
-                      onClick={() => {
-                        const updated = { ...formData, theme: t.name };
-                        setFormData(updated);
-                        saveSettings(updated);
-                      }}
-                      className={`relative flex flex-col justify-between p-4.5 rounded-xl border transition-all duration-300 cursor-pointer ${
-                        isActive ? t.activeBorder : `${t.borderClass} bg-[#0a0a0f]`
-                      }`}
-                    >
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-bold text-white uppercase tracking-wider">{t.name}</h4>
-                        <p className="text-[9px] text-gray-500 leading-normal">{t.desc}</p>
-                      </div>
-
-                      <div className="flex items-center justify-between pt-4 mt-2">
-                        {/* Theme pills */}
-                        <div className="flex gap-1.5">
-                          {t.colors.map((c, i) => (
-                            <span key={i} className={`h-3.5 w-3.5 rounded-full ${c} border border-[#0a0a0f]`}></span>
-                          ))}
+              <div className="space-y-3">
+                <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Select Active Theme
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    {
+                      name: 'Dark Futurism',
+                      desc: 'Deep indigo & cyan neon grids',
+                      colors: ['bg-indigo-500', 'bg-cyan-400'],
+                      borderClass: 'border-indigo-500/10 hover:border-indigo-500/30',
+                      activeBorder: 'border-indigo-500 bg-indigo-950/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]'
+                    },
+                    {
+                      name: 'Midnight Blue',
+                      desc: 'Cobalt base with sky blue layers',
+                      colors: ['bg-blue-600', 'bg-sky-400'],
+                      borderClass: 'border-blue-500/10 hover:border-blue-500/30',
+                      activeBorder: 'border-blue-500 bg-blue-950/20 shadow-[0_0_20px_rgba(59,130,246,0.15)]'
+                    },
+                    {
+                      name: 'Neo Emerald',
+                      desc: 'Forest base with seafoam emeralds',
+                      colors: ['bg-emerald-500', 'bg-teal-400'],
+                      borderClass: 'border-emerald-500/10 hover:border-emerald-500/30',
+                      activeBorder: 'border-emerald-500 bg-emerald-950/20 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
+                    }
+                  ].map((t) => {
+                    const isActive = formData.theme === t.name;
+                    return (
+                      <div
+                        key={t.name}
+                        onClick={() => {
+                          const updated = { ...formData, theme: t.name };
+                          setFormData(updated);
+                          saveSettings(updated);
+                        }}
+                        className={`relative flex flex-col justify-between p-4.5 rounded-xl border transition-all duration-300 cursor-pointer ${
+                          isActive ? t.activeBorder : `${t.borderClass} bg-[#0a0a0f]`
+                        }`}
+                      >
+                        <div className="space-y-1">
+                          <h4 className="text-xs font-bold text-white uppercase tracking-wider">{t.name}</h4>
+                          <p className="text-[9px] text-gray-500 leading-normal">{t.desc}</p>
                         </div>
 
-                        {/* Active Badge */}
-                        {isActive && (
-                          <span className="rounded bg-indigo-950 border border-indigo-500 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-indigo-400">
-                            Active
-                          </span>
-                        )}
+                        <div className="flex items-center justify-between pt-4 mt-2">
+                          <div className="flex gap-1.5">
+                            {t.colors.map((c, i) => (
+                              <span key={i} className={`h-3.5 w-3.5 rounded-full ${c} border border-[#0a0a0f]`}></span>
+                            ))}
+                          </div>
+
+                          {isActive && (
+                            <span className="rounded bg-indigo-950 border border-indigo-500 px-1.5 py-0.5 text-[8px] font-extrabold uppercase tracking-widest text-indigo-400">
+                              Active
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* AI Resolution Depth Select */}
-              <div className="space-y-1.5 pt-2 border-t border-indigo-500/5">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
-                  AI Stress-Test Resolution
-                </label>
-                <select
-                  name="analysisPreference"
-                  value={formData.analysisPreference}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-indigo-500/10 bg-[#0a0a0f] p-3 text-sm text-white outline-none focus:border-indigo-500/40 focus:ring-1 focus:ring-indigo-500"
-                >
-                  <option value="Comprehensive">Comprehensive Multi-Layer (Recommended)</option>
-                  <option value="Standard">Standard Core Metrics</option>
-                  <option value="Fast">Fast Proof-of-Concept</option>
-                </select>
-              </div>
+
             </div>
 
             {/* Notification and AutoSave toggles */}
