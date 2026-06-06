@@ -5,12 +5,25 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>StartupXpert — AI Startup Lifecycle Management</title>
-    <!-- Google Fonts: Syne & DM Sans -->
+    <!-- Google Fonts: Inter & DM Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Syne:wght@400..800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300..700;1,9..40,300..700&display=swap" rel="stylesheet">
   </head>
   <body style="background-color: #0a0a0f; color: #f3f4f6; overflow-x: hidden; font-family: 'DM Sans', sans-serif;">
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('startup_settings');
+          var theme = saved ? JSON.parse(saved).theme : 'Dark Futurism';
+          var cls = 'theme-dark-futurism';
+          if (theme === 'Midnight Blue') cls = 'theme-midnight-blue';
+          else if (theme === 'Neo Emerald') cls = 'theme-neo-emerald';
+          document.body.classList.add(cls);
+          document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

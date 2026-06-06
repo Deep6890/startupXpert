@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useStartup } from '../context/StartupContext';
 import { useToast } from '../context/ToastContext';
-import Sidebar from '../components/Sidebar';
+import DashboardLayout from '../layouts/DashboardLayout';
 import { 
   Sparkles, 
   Layers, 
@@ -11,51 +11,43 @@ import {
   ArrowUpRight, 
   Clock, 
   Plus, 
-  Trash2,
-  Play,
   Briefcase,
   TrendingUp,
   ChevronRight,
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
-  FileCode,
-  Gauge
+  Gauge,
+  Activity,
+  Download,
+  Info,
+  Target,
+  Lock
 } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { showToast } = useToast();
   
   const { 
     user, 
+    onboardingRole,
     startupDetails, 
     analysisScores,
-    dashboardStats, 
-    analysisHistory,
     resumeState,
     restoreDraft,
-    setAnalysisScores,
-    setStartupInfo,
-    deleteHistoryItem,
-    setNewUserStatus
+    roadmapNodes,
+    getInitials,
+    analysisHistory,
+    restoreStartupVenture,
+    clearDraft,
+    startNewValidation
   } = useStartup();
 
-  const [activeTab, setActiveTab] = useState(() => {
-    return location.state?.activeTab || 'overview';
-  });
+  // Check if a validated startup exists in context
+  const hasValidatedStartup = !!startupDetails?.startupName && !!analysisScores && (roadmapNodes?.length || 0) > 0;
 
-  useEffect(() => {
-    if (location.state?.activeTab) {
-      setActiveTab(location.state.activeTab);
-    }
-  }, [location.state]);
-
-  // Verify if a verified startup exists in current session context
-  const hasValidatedStartup = !!startupDetails.startupName;
-
-  // Handle Quick Resume Draft Click (Micro Patch 4)
+  // Handle Quick Resume Draft Click
   const handleQuickResume = () => {
     const restored = restoreDraft();
     if (restored) {
@@ -63,607 +55,487 @@ const Dashboard = () => {
     }
   };
 
-  // View Previous Analysis Item (Micro Patch 3)
-  const handleViewAnalysis = (item) => {
-    setLoadingStateSimulated(() => {
-      // Restore score matrix and names in context
-      setAnalysisScores(item.scores);
-      setStartupInfo({
-        startupName: item.startupName,
-        startupDomain: item.scores.marketDemand ? 'SaaS' : 'Other', // fallback Domain sync
-        revenueModel: item.scores.revenuePotential ? 'Subscription' : 'Other',
-        availableFunding: 'Bootstrapped',
-        mvpTimeline: '3 months',
-        platformType: ['Web App']
-      });
-      showToast(`Loading analysis report for "${item.startupName}"`, 'success');
-      navigate('/analysis/result');
-    });
+  const handleStartFresh = () => {
+    if (window.confirm('Are you sure you want to discard your saved draft and start fresh? This action is irreversible.')) {
+      clearDraft();
+      navigate('/onboarding/role');
+    }
   };
 
-  // Delete History Item (Micro Patch 3)
-  const handleDeleteHistory = (e, id) => {
-    e.stopPropagation(); // prevent card click
-    deleteHistoryItem(id);
-  };
+  // Compute overall completion stats from roadmapNodes
+  const totalTasks = roadmapNodes?.reduce((acc, n) => acc + (n.tasks?.length || 0), 0) || 0;
+  const completedTasks = roadmapNodes?.reduce((acc, n) => acc + (n.tasks?.filter(t => t.completed).length || 0), 0) || 0;
+  const roadmapProgressPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Simulated internal page loading trigger
-  const setLoadingStateSimulated = (callback) => {
-    showToast('Synthesizing venture report data layers...', 'info');
-    setTimeout(callback, 800);
-  };
+  // Compute readiness score
+  const feasibilityScore = analysisScores?.feasibility?.score || 0;
+  const riskScore = analysisScores?.riskLevel?.score || 0;
+  const innovationScore = analysisScores?.innovationLevel?.score || 0;
+  const readinessScore = hasValidatedStartup 
+    ? Math.round((feasibilityScore * 0.4) + ((100 - riskScore) * 0.3) + (innovationScore * 0.3))
+    : 0;
+
+  // Find active node (In Progress or first Pending node)
+  const currentActiveNode = roadmapNodes?.find(n => n.status === 'In Progress' && n.id !== 'root') || roadmapNodes?.find(n => n.status === 'Pending' && n.id !== 'root');
+
+  // Onboarding verification checks for completion percent
+  const isStep1Done = !!onboardingRole?.fullName && !!onboardingRole?.profession;
+  const isStep2Done = !!startupDetails?.startupName && !!startupDetails?.startupDescription;
+  const onboardingCompletionPercent = isStep2Done ? 66 : (isStep1Done ? 33 : 0);
+
+  // Statistics cards data mapping
+  const stats = [
+    {
+      label: 'TOTAL STARTUPS',
+      value: analysisHistory.length,
+      subtext: 'Venture index profiles registered',
+      icon: Briefcase,
+    },
+    {
+      label: 'ANALYSIS DONE',
+      value: analysisHistory.filter(h => h.scores).length,
+      subtext: 'Stress-tests fully compiled',
+      icon: Layers,
+    },
+    {
+      label: 'SAVED DRAFTS',
+      value: resumeState ? 1 : 0,
+      subtext: 'Pending onboarding drafts',
+      icon: FileText,
+    },
+    {
+      label: 'ROADMAP STEPS',
+      value: hasValidatedStartup ? `${completedTasks} / ${totalTasks}` : '0 / 10',
+      subtext: 'Venture milestones executed',
+      icon: Compass,
+    }
+  ];
 
   return (
-    <div className="relative min-h-screen bg-[#0a0a0f] flex text-white overflow-hidden">
-      
-      {/* Sidebar Navigation */}
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-
-      {/* Main Board Content */}
-      <main className="flex-grow p-8 overflow-y-auto max-h-screen" role="main" aria-label="Dashboard Workspace Overview">
-        <div className="max-w-6xl mx-auto space-y-8 animate-[fadeIn_0.3s_ease-out]">
+    <DashboardLayout>
+      <div className="space-y-6 md:space-y-8 text-left">
+        
+        {/* ── Welcome Banner / Venture Header Card ── */}
+        <div className="relative rounded-2xl border border-indigo-500/15 bg-indigo-950/15 p-6 md:p-8 backdrop-blur-md overflow-hidden shadow-[0_0_35px_rgba(99,102,241,0.05)]">
+          <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none"></div>
           
-          {/* Dashboard Header Bar or New User Onboarding Banner */}
-          {user.isNewUser ? (
-            <div className="relative rounded-2xl border border-indigo-500/15 bg-indigo-950/15 p-8 text-left backdrop-blur-md overflow-hidden space-y-6 shadow-[0_0_35px_rgba(99,102,241,0.08)]">
-              {/* background decorative light */}
-              <div className="absolute -right-24 -top-24 h-48 w-48 rounded-full bg-indigo-500/10 blur-2xl"></div>
-              
-              <div className="space-y-2 max-w-2xl">
-                <span className="rounded bg-indigo-950 border border-indigo-500/20 px-3 py-0.5 text-3xs font-extrabold tracking-widest text-indigo-300 uppercase">
-                  Workspace Initialized
+          {hasValidatedStartup ? (
+            /* 1. Validated User State */
+            <div className="space-y-4">
+              <div className="space-y-2 max-w-3xl">
+                <span className="text-2xs font-extrabold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/15">
+                  Venture Workspace Active
                 </span>
-                <h2 className="font-heading text-3xl font-extrabold text-white mt-3">
-                  Welcome to StartupXpert
+                <h2 className="font-heading text-2xl font-bold text-white pt-1">
+                  Active Venture: {startupDetails.startupName} 🚀
                 </h2>
                 <p className="text-sm text-gray-400 leading-relaxed">
-                  Let's validate your first startup idea. Our AI engine will stress-test your concept models against 250+ target market segments, problem-solution vectors, and cash-flow parameters.
+                  Feasibility stress-test compiled. Explore your roadmap milestone mind map, custom generated pitch decks, and SWOT reports.
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  onClick={() => navigate('/roadmap')}
+                  className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-all duration-300 hover:shadow-[0_0_25px_rgba(99,102,241,0.2)] cursor-pointer"
+                >
+                  <Compass className="h-4 w-4" />
+                  View Interactive Roadmap
+                </button>
                 <button
                   onClick={() => {
-                    setNewUserStatus(false);
+                    startNewValidation();
                     navigate('/onboarding/role');
                   }}
-                  className="group flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-indigo-600/10 hover:bg-indigo-500 transition-all duration-300 hover:scale-[1.02] w-full sm:w-auto"
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Validate Other Idea &rarr;
+                </button>
+              </div>
+            </div>
+          ) : resumeState ? (
+            /* 2. Onboarding User State (Has Saved Draft) */
+            <div className="space-y-4">
+              <div className="space-y-2 max-w-3xl">
+                <span className="text-2xs font-extrabold uppercase tracking-widest text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/15">
+                  Validation Draft In Progress
+                </span>
+                <h2 className="font-heading text-2xl font-bold text-white pt-1">
+                  Resume Your Startup Validation, {user.fullName || 'Founder'} 📝
+                </h2>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  You have a saved validation draft in progress ({onboardingCompletionPercent}% complete). Resume now to complete your venture stress-test.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <button
+                  onClick={handleQuickResume}
+                  className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-all duration-300 hover:shadow-[0_0_25px_rgba(99,102,241,0.2)] cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
-                  Validate Startup
+                  Resume Validation Draft
                 </button>
-                
                 <button
-                  onClick={() => {
-                    setNewUserStatus(false);
-                    navigate('/profile');
-                  }}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-gray-300 hover:bg-indigo-500/10 hover:text-white transition-all duration-300 w-full sm:w-auto"
+                  onClick={handleStartFresh}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider transition-colors cursor-pointer"
                 >
-                  Complete Profile
-                </button>
-
-                <button
-                  onClick={() => setNewUserStatus(false)}
-                  className="text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-all duration-300 mt-2 sm:mt-0 sm:ml-auto"
-                >
-                  Skip for Now
+                  Start Fresh Validation &rarr;
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-500/5 pb-6 text-left">
-              <div>
-                <span className="text-xs font-bold uppercase tracking-widest text-indigo-400">V1.0.0 Stable Release</span>
-                <h1 className="font-heading text-3xl font-extrabold text-white mt-1">
-                  Welcome back, {user.fullName || 'Innovator'}
-                </h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Here is your venture portfolio status and market validation updates.
+            /* 3. New User State */
+            <div className="space-y-4">
+              <div className="space-y-2 max-w-3xl">
+                <span className="text-2xs font-extrabold uppercase tracking-widest text-indigo-400 bg-indigo-500/10 px-2.5 py-1 rounded-md border border-indigo-500/15">
+                  Getting Started
+                </span>
+                <h2 className="font-heading text-2xl font-bold text-white pt-1">
+                  Welcome to StartupXpert, {user.fullName || 'Founder'} 👋
+                </h2>
+                <p className="text-sm text-gray-400 leading-relaxed">
+                  Your account is ready. When you're set, validate your startup idea — our AI will stress-test it across 250+ market parameters.
                 </p>
               </div>
-              
-              <div className="flex items-center gap-3">
+
+              <div className="flex flex-wrap items-center gap-4 pt-2">
                 <button
                   onClick={() => navigate('/onboarding/role')}
-                  className="group flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4.5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-indigo-600/10 hover:bg-indigo-500 hover:shadow-indigo-600/20 hover:scale-[1.02] transition-all duration-300 focus:ring-2 focus:ring-indigo-500"
-                  aria-label="Validate New Idea"
+                  className="group flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-all duration-300 hover:shadow-[0_0_25px_rgba(99,102,241,0.2)] cursor-pointer"
                 >
                   <Plus className="h-4 w-4" />
-                  Validate New Idea
+                  Validate My First Idea
+                </button>
+                <button
+                  onClick={() => showToast('Click around! View the Locked Roadmap, Documents or Settings in the sidebar to see how they look.', 'info')}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Explore dashboard first &rarr;
                 </button>
               </div>
             </div>
           )}
+        </div>
 
-          {/* TAB CONTENTS */}
-
-          {/* 1. OVERVIEW TAB */}
-          {activeTab === 'overview' && (
-            <div className="space-y-8">
-              
-              {/* Statistic Summary Cards */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
-                
-                {/* Card 1: Total Startups */}
-                <div className="relative rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md overflow-hidden hover:border-indigo-500/30 transition-all duration-300">
-                  <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/5 blur-xl"></div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-500/20 bg-indigo-500/5 text-indigo-400">
-                      <Briefcase className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">Total Startups</span>
+        {/* ── Statistics Cards Row ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, idx) => {
+            const Icon = stat.icon;
+            return (
+              <div key={idx} className="relative rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-5 backdrop-blur-md overflow-hidden hover:border-indigo-500/30 transition-all duration-300 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-extrabold uppercase tracking-wider text-gray-500">{stat.label}</span>
+                  <div className="h-7 w-7 rounded-lg border border-indigo-500/10 bg-indigo-500/5 flex items-center justify-center text-indigo-400">
+                    <Icon className="h-3.5 w-3.5" />
                   </div>
-                  <p className="mt-4 font-heading text-3xl font-black text-white">
-                    {dashboardStats.totalStartups}
-                  </p>
-                  <p className="text-[10px] text-indigo-400 font-semibold mt-1">Venture index profiles registered</p>
                 </div>
-
-                {/* Card 2: Completed Analysis */}
-                <div className="relative rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md overflow-hidden hover:border-indigo-500/30 transition-all duration-300">
-                  <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-emerald-500/5 blur-xl"></div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-emerald-500/20 bg-[#0a0a0f] text-emerald-400">
-                      <Layers className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">Analysis Done</span>
-                  </div>
-                  <p className="mt-4 font-heading text-3xl font-black text-white">
-                    {dashboardStats.completedAnalysis}
-                  </p>
-                  <p className="text-[10px] text-emerald-400 font-semibold mt-1">Stress-tests fully compiled</p>
-                </div>
-
-                {/* Card 3: Saved Draft Count */}
-                <div className="relative rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md overflow-hidden hover:border-indigo-500/30 transition-all duration-300">
-                  <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-cyan-500/5 blur-xl"></div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-cyan-500/20 bg-[#0a0a0f] text-cyan-400">
-                      <FileCode className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">Saved Drafts</span>
-                  </div>
-                  <p className="mt-4 font-heading text-3xl font-black text-white">
-                    {dashboardStats.savedDraftCount}
-                  </p>
-                  <p className="text-[10px] text-cyan-400 font-semibold mt-1">Pending onboarding drafts</p>
-                </div>
-
-                {/* Card 4: Roadmap Progress Completed */}
-                <div className="relative rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md overflow-hidden hover:border-indigo-500/30 transition-all duration-300">
-                  <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-indigo-500/5 blur-xl"></div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-indigo-500/20 bg-[#0a0a0f] text-indigo-400">
-                      <Compass className="h-5 w-5" />
-                    </div>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-gray-500">Roadmap Steps</span>
-                  </div>
-                  <p className="mt-4 font-heading text-3xl font-black text-white">
-                    {dashboardStats.roadmapProgress}
-                  </p>
-                  <p className="text-[10px] text-indigo-400 font-semibold mt-1">Venture milestones executed</p>
-                </div>
-
+                <p className="mt-4 font-heading text-3xl font-black text-white font-mono leading-none">
+                  {stat.value}
+                </p>
+                <p className="text-[10px] text-gray-500 mt-2">{stat.subtext}</p>
               </div>
+            );
+          })}
+        </div>
 
-              {/* Saved Draft Quick Resume Card (Micro Patch 4) */}
-              {resumeState && (
-                <div className="relative overflow-hidden rounded-2xl border border-cyan-500/20 bg-cyan-950/10 p-6 backdrop-blur-md text-left flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-[0_0_30px_rgba(34,211,238,0.05)] animate-pulse">
-                  <div className="absolute -right-16 -top-16 h-32 w-32 rounded-full bg-cyan-500/5 blur-2xl"></div>
-                  <div className="space-y-1">
-                    <span className="rounded bg-cyan-950 border border-cyan-500/30 px-2 py-0.5 text-3xs font-extrabold tracking-widest text-cyan-400 uppercase">
-                      Draft Resume Found
-                    </span>
-                    <h3 className="text-base font-bold text-white mt-2">
-                      Would you like to resume your unfinished onboarding details?
-                    </h3>
-                    <p className="text-xs text-gray-400">
-                      Your changes are saved. Return immediately to compile your venture milestones checklist.
+        {/* ── Main Content Grid Layout ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          
+          {/* Left Column (Venture History / Validation Metrics) */}
+          <div className="lg:col-span-2 space-y-6 md:space-y-8">
+            
+            {!hasValidatedStartup ? (
+              /* Venture History & Actions */
+              <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md flex flex-col justify-between min-h-[380px]">
+                <div className="border-b border-indigo-500/5 pb-3 flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                    <Clock className="h-4.5 w-4.5 text-indigo-400" />
+                    VENTURE HISTORY & ACTIONS
+                  </span>
+                </div>
+
+                {analysisHistory.length === 0 ? (
+                  <div className="flex-grow flex flex-col items-center justify-center text-center p-8 space-y-4">
+                    <div className="h-16 w-16 rounded-full border border-indigo-500/20 bg-indigo-500/5 flex items-center justify-center text-indigo-400">
+                      <Clock className="h-8 w-8 animate-pulse" />
+                    </div>
+                    <h3 className="font-heading text-base font-bold text-white">No validation records compiled</h3>
+                    <p className="text-xs text-gray-500 max-w-sm leading-relaxed">
+                      Stress-test a new startup idea to generate metric score grids and roadmap milestones here.
                     </p>
                   </div>
+                ) : (
+                  <div className="flex-grow py-4 space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                    {analysisHistory.map((item) => (
+                      <div 
+                        key={item.id}
+                        onClick={() => {
+                          if (window.confirm(`Would you like to load "${item.startupName}" as your active working venture?`)) {
+                            restoreStartupVenture(item);
+                            navigate('/dashboard');
+                          }
+                        }}
+                        className="p-3.5 rounded-xl border border-indigo-500/5 bg-indigo-950/5 flex items-center justify-between gap-3 group cursor-pointer hover:border-indigo-500/30 transition-all duration-300"
+                      >
+                        <div className="min-w-0 text-left">
+                          <h4 className="text-xs font-bold text-white truncate group-hover:text-indigo-400 transition-colors">{item.startupName}</h4>
+                          <p className="text-[9px] text-gray-500 mt-0.5">{item.date} • {item.details?.startupDomain || 'SaaS'}</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-4 shrink-0 font-mono">
+                          <div className="text-right">
+                            <span className="text-[8px] font-bold text-gray-500 uppercase block">Feasibility</span>
+                            <span className="text-xs font-bold text-indigo-400">{item.scores?.feasibility?.score || 0}%</span>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-500 group-hover:text-white transition-colors" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="border-t border-indigo-500/5 pt-3 text-left">
                   <button
-                    onClick={handleQuickResume}
-                    className="flex items-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white px-5 py-3 text-xs font-bold uppercase tracking-wider shadow-lg shadow-cyan-600/10 transition-all duration-300 shrink-0 focus:ring-2 focus:ring-cyan-500"
-                    aria-label="Resume Draft details step"
+                    onClick={() => {
+                      if (analysisHistory.length === 0) {
+                        showToast('No validation history compiled yet.', 'info');
+                        return;
+                      }
+                      showToast('Exporting venture portfolio history... Coming soon in V2.0!', 'info');
+                    }}
+                    className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-wider transition-colors"
                   >
-                    <Play className="h-3.5 w-3.5 fill-white" />
-                    Quick Resume
+                    Export portfolio history log &gt;
                   </button>
                 </div>
-              )}
-
-              {/* Middle Section: Recent Activity & Quick Action Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                {/* Left Side: Recent Activity & Analysis History List (Micro Patch 3 & 4) */}
-                <div className="lg:col-span-2 rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md flex flex-col justify-between min-h-[350px]">
-                  <div className="border-b border-indigo-500/5 pb-3 flex items-center justify-between text-left">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-indigo-400" />
-                      Venture History &amp; Actions
+              </div>
+            ) : (
+              /* Validated Scorecard & AI Insights */
+              <div className="space-y-6 md:space-y-8">
+                {/* AI Validation Scorecard */}
+                <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md space-y-4">
+                  <div className="border-b border-indigo-500/5 pb-3 flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                      <Layers className="h-4.5 w-4.5 text-indigo-400" />
+                      AI Validation Scorecard
                     </span>
-                    {analysisHistory.length > 0 && (
-                      <span className="text-[10px] text-indigo-400 font-bold font-mono">
-                        {analysisHistory.length} ENTRIES ARCHIVED
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { label: 'Market Demand', key: 'marketDemand', icon: Target },
+                      { label: 'Target Audience Fit', key: 'targetAudienceFit', icon: Briefcase },
+                      { label: 'Problem-Solution Fit', key: 'problemSolutionFit', icon: Sparkles },
+                      { label: 'Competitor Presence', key: 'competitorPresence', icon: AlertTriangle },
+                      { label: 'Revenue Potential', key: 'revenuePotential', icon: TrendingUp },
+                      { label: 'Innovation Level', key: 'innovationLevel', icon: Layers },
+                      { label: 'Scalability Factor', key: 'scalability', icon: ArrowUpRight },
+                      { label: 'Tech Feasibility', key: 'feasibility', icon: ShieldCheck },
+                    ].map((metric) => {
+                      const val = analysisScores?.[metric.key] || { score: 75, status: 'High' };
+                      const MIcon = metric.icon;
+                      return (
+                        <div key={metric.key} className="p-3.5 rounded-xl border border-indigo-500/5 bg-indigo-950/5 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="h-7 w-7 rounded-lg border border-indigo-500/10 bg-indigo-500/5 flex items-center justify-center text-indigo-400 shrink-0">
+                              <MIcon className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-300 truncate">{metric.label}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0 font-mono">
+                            <span className="text-xs font-bold text-white">{val.score}%</span>
+                            <span className={`rounded px-1.5 py-0.5 text-[8px] font-extrabold uppercase ${
+                              val.status === 'High' || (val.status === 'Low' && metric.key === 'riskLevel')
+                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            }`}>{val.status}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* AI Strategic Insights */}
+                <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md space-y-4">
+                  <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2 border-b border-indigo-500/5 pb-3">
+                    <Sparkles className="h-4.5 w-4.5 text-cyan-400" />
+                    AI Strategic Insight
+                  </span>
+                  <div className="p-4 rounded-xl border border-cyan-500/15 bg-cyan-500/5 text-left space-y-3 relative overflow-hidden">
+                    <div className="absolute right-0 top-0 h-10 w-10 bg-cyan-500/5 rounded-bl-full pointer-events-none"></div>
+                    <p className="text-xs text-cyan-300 leading-relaxed font-sans">
+                      {analysisScores?.marketDemand?.details || 'Stress-testing market parameters...'}
+                    </p>
+                    <div className="pt-2 border-t border-cyan-500/10 text-[10px] text-gray-500 flex items-center gap-1.5 font-mono">
+                      <Info className="h-3 w-3" />
+                      Advice Stable in V1
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column (Startup Progress Panel) */}
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md flex flex-col justify-between min-h-[380px]">
+              <div>
+                <div className="border-b border-indigo-500/5 pb-3 flex items-center gap-2">
+                  <Activity className="h-4.5 w-4.5 text-indigo-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-400">
+                    STARTUP PROGRESS
+                  </span>
+                </div>
+
+                {!hasValidatedStartup ? (
+                  /* Before Validation Parameters */
+                  <div className="space-y-5 pt-4 text-left">
+                    
+                    {/* Validation Status */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400 font-semibold">Validation Status</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Not Started
                       </span>
-                    )}
-                  </div>
+                    </div>
 
-                  {analysisHistory.length > 0 ? (
-                    <div className="flex-grow py-4 space-y-4 max-h-[320px] overflow-y-auto pr-1">
-                      {analysisHistory.map((item) => (
+                    {/* Roadmap Status */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400 font-semibold">Roadmap Status</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 text-gray-500 flex items-center gap-1 border border-white/5">
+                        <Lock className="h-3 w-3" /> Locked
+                      </span>
+                    </div>
+
+                    {/* Documents Status */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400 font-semibold">Documents Status</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-white/5 text-gray-500 flex items-center gap-1 border border-white/5">
+                        <Lock className="h-3 w-3" /> Locked
+                      </span>
+                    </div>
+
+                    {/* Onboarding Completion % */}
+                    <div className="space-y-1.5 pt-2">
+                      <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                        <span className="uppercase">Onboarding Completion</span>
+                        <span className="text-indigo-400 font-mono">{onboardingCompletionPercent}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-[#0a0a0f] rounded-full overflow-hidden">
                         <div 
-                          key={item.id}
-                          onClick={() => handleViewAnalysis(item)}
-                          className="group flex items-start justify-between p-4 rounded-xl border border-indigo-500/10 bg-indigo-950/20 hover:border-indigo-500/30 hover:bg-indigo-950/30 transition-all duration-300 cursor-pointer text-left relative"
-                        >
-                          <div className="space-y-1.5 max-w-md">
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-sm font-bold text-white group-hover:text-indigo-300 transition-colors">
-                                {item.startupName}
-                              </h4>
-                              <span className="text-[10px] text-gray-500 font-mono">{item.date}</span>
-                            </div>
-                            <p className="text-xs text-gray-400 leading-relaxed truncate">
-                              {item.summary}
-                            </p>
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              <span className="rounded bg-indigo-950 border border-indigo-500/20 px-2 py-0.5 text-3xs font-extrabold tracking-wider uppercase text-indigo-300">
-                                FEASIBILITY: {item.status}
-                              </span>
-                              <span className="rounded bg-rose-950 border border-rose-500/20 px-2 py-0.5 text-3xs font-extrabold tracking-wider uppercase text-rose-300">
-                                RISK: {item.risk}
-                              </span>
-                            </div>
-                          </div>
+                          className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 rounded-full transition-all duration-300"
+                          style={{ width: `${onboardingCompletionPercent}%` }}
+                        ></div>
+                      </div>
+                    </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              onClick={(e) => handleDeleteHistory(e, item.id)}
-                              className="h-8 w-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-rose-400 hover:bg-rose-500/5 border border-transparent hover:border-rose-500/10 transition-all duration-300"
-                              title="Delete record"
-                              aria-label={`Delete validation history record for ${item.startupName}`}
+                  </div>
+                ) : (
+                  /* After Validation Parameters */
+                  <div className="space-y-5 pt-4 text-left">
+                    
+                    {/* Startup Readiness Score */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-400 font-semibold">Startup Readiness Score</span>
+                        <span className="text-sm font-bold text-cyan-400 font-mono">{readinessScore}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-[#0a0a0f] rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-indigo-500 to-cyan-400 rounded-full transition-all duration-300"
+                          style={{ width: `${readinessScore}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Current Startup Stage */}
+                    <div className="flex items-center justify-between border-t border-indigo-500/5 pt-3.5">
+                      <span className="text-xs text-gray-400 font-semibold">Current Startup Stage</span>
+                      <span className="text-xs font-bold text-white capitalize">
+                        {startupDetails.startupStage || 'Onboarding'}
+                      </span>
+                    </div>
+
+                    {/* Roadmap Progress % */}
+                    <div className="space-y-1.5 border-t border-indigo-500/5 pt-3.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-400 font-semibold">Roadmap Progress %</span>
+                        <span className="text-xs font-bold text-indigo-400 font-mono">{roadmapProgressPercent}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-[#0a0a0f] rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-300"
+                          style={{ width: `${roadmapProgressPercent}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Active Milestone */}
+                    <div className="border-t border-indigo-500/5 pt-3.5 space-y-1">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase block">Active Milestone</span>
+                      <span className="text-xs font-bold text-white block truncate">
+                        {currentActiveNode?.title || 'Launch Strategy & Risk Controls'}
+                      </span>
+                    </div>
+
+                    {/* Documents Generated */}
+                    <div className="border-t border-indigo-500/5 pt-3.5 space-y-2">
+                      <span className="text-[10px] text-gray-500 font-bold uppercase block">Documents Generated</span>
+                      <div className="space-y-1.5">
+                        {[
+                          { title: 'Business Plan', desc: 'Core outline dossier' },
+                          { title: 'SWOT Analysis', desc: 'Dynamic internal matrices' },
+                          { title: 'Startup Roadmap Report', desc: 'Milestones checklist report' },
+                        ].map((doc, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-indigo-950/5 border border-indigo-500/5 hover:border-indigo-500/10 transition-colors">
+                            <div className="min-w-0 text-left">
+                              <span className="text-[10px] font-bold text-white block truncate uppercase">{doc.title}</span>
+                            </div>
+                            <Link 
+                              to="/documents"
+                              className="h-6 w-6 flex items-center justify-center rounded border border-indigo-500/10 bg-[#0a0a0f] hover:border-indigo-500/30 text-gray-400 hover:text-white transition-all shrink-0"
+                              title={`Download ${doc.title}`}
                             >
-                              <Trash2 className="h-4.5 w-4.5" />
-                            </button>
-                            <ChevronRight className="h-5 w-5 text-gray-600 group-hover:text-white transition-colors" />
+                              <Download className="h-3 w-3" />
+                            </Link>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="flex-grow flex flex-col items-center justify-center py-12 text-center space-y-4">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full border border-indigo-500/20 bg-indigo-500/5 text-indigo-400">
-                        <Clock className="h-6 w-6" />
-                      </div>
-                      <div className="max-w-xs space-y-1.5">
-                        <h4 className="text-sm font-bold text-white">No validation records compiled</h4>
-                        <p className="text-xs leading-relaxed text-gray-500">
-                          Stress-test a new startup idea to generate metric score grids and roadmap milestones here.
-                        </p>
+                        ))}
                       </div>
                     </div>
-                  )}
 
-                  <div className="text-left pt-3 border-t border-indigo-500/5">
-                    <button 
-                      onClick={() => showToast('History exports are slatted for Version 2.0 releases.', 'info')}
-                      className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors inline-flex items-center gap-1"
-                    >
-                      Export portfolio history log
-                      <ChevronRight className="h-3 w-3" />
-                    </button>
                   </div>
-                </div>
-
-                {/* Right Side: Quick Action Buttons Grid */}
-                <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-6 backdrop-blur-md flex flex-col justify-between">
-                  <div className="border-b border-indigo-500/5 pb-3 text-left">
-                    <span className="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-cyan-400" />
-                      Quick Operations
-                    </span>
-                  </div>
-
-                  <div className="flex-grow py-6 space-y-4">
-                    {/* Action 1: Validate Idea */}
-                    <button
-                      onClick={() => navigate('/onboarding/role')}
-                      className="w-full flex items-center justify-between p-4 rounded-xl border border-indigo-500/10 bg-indigo-500/5 hover:border-indigo-500/30 hover:bg-indigo-500/10 text-left transition-all duration-300 group"
-                    >
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-white">Validate New Idea</h4>
-                        <p className="text-[10px] text-gray-500">Stress-test concepts against market demands</p>
-                      </div>
-                      <ArrowUpRight className="h-5 w-5 text-gray-600 group-hover:text-indigo-400 transition-colors" />
-                    </button>
-
-                    {/* Action 2: Generate Roadmap */}
-                    <button
-                      onClick={() => showToast('Roadmap generation modules are coming soon in Version 2.0!', 'info')}
-                      className="w-full flex items-center justify-between p-4 rounded-xl border border-indigo-500/10 bg-indigo-500/5 hover:border-indigo-500/30 hover:bg-indigo-500/10 text-left transition-all duration-300 group"
-                    >
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-white">Generate Roadmap</h4>
-                        <p className="text-[10px] text-gray-500">Draft actionable project building lists</p>
-                      </div>
-                      <ArrowUpRight className="h-5 w-5 text-gray-600 group-hover:text-indigo-400 transition-colors" />
-                    </button>
-
-                    {/* Action 3: Create Document */}
-                    <button
-                      onClick={() => showToast('Investor Pitch and compliance document modules coming soon!', 'info')}
-                      className="w-full flex items-center justify-between p-4 rounded-xl border border-indigo-500/10 bg-indigo-500/5 hover:border-indigo-500/30 hover:bg-indigo-500/10 text-left transition-all duration-300 group"
-                    >
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-white">Create Document</h4>
-                        <p className="text-[10px] text-gray-500">Compile investor pitch decks and revenue sheets</p>
-                      </div>
-                      <ArrowUpRight className="h-5 w-5 text-gray-600 group-hover:text-indigo-400 transition-colors" />
-                    </button>
-                  </div>
-
-                  <div className="text-xs text-gray-500 leading-relaxed italic pt-3 border-t border-indigo-500/5 text-left">
-                    Use quick buttons to expedite product launch cycles.
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          )}
-
-          {/* 2. MY STARTUPS TAB */}
-          {activeTab === 'startups' && (
-            <div className="space-y-8 text-left">
-              <div>
-                <h3 className="font-heading text-xl font-bold text-white flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-indigo-400" />
-                  My Startups Portfolio
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">Manage and view details of your tracked venture ideas.</p>
+                )}
               </div>
 
-              {analysisHistory.length > 0 ? (
-                <div className="space-y-6">
-                  {analysisHistory.map((item) => (
-                    <div 
-                      key={item.id}
-                      onClick={() => handleViewAnalysis(item)}
-                      className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/80 p-6 backdrop-blur-md space-y-6 cursor-pointer hover:border-indigo-500/30 transition-all duration-300"
-                    >
-                      {/* Header Row */}
-                      <div className="flex items-center justify-between border-b border-indigo-500/5 pb-4">
-                        <div>
-                          <h4 className="text-lg font-bold font-heading text-white">{item.startupName}</h4>
-                          <p className="text-xs text-indigo-400 mt-0.5">{item.scores.marketDemand ? 'SaaS domain model' : 'Venture Proposal'}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="rounded-full bg-emerald-950/60 border border-emerald-500/30 px-3 py-1 text-2xs font-bold uppercase tracking-widest text-emerald-400">
-                            Validated Index: {item.status}
-                          </span>
-                          <button
-                            onClick={(e) => handleDeleteHistory(e, item.id)}
-                            className="p-2 text-gray-500 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-all duration-300"
-                            aria-label="Delete analysis"
-                          >
-                            <Trash2 className="h-4.5 w-4.5" />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Summary Description block */}
-                      <div className="space-y-1 text-left">
-                        <span className="text-indigo-400 font-bold uppercase tracking-wider text-[10px] block">Feasibility Summary</span>
-                        <p className="text-xs leading-relaxed text-gray-400">{item.summary}</p>
-                      </div>
-
-                      {/* Metric Score Quick review */}
-                      <div className="pt-4 border-t border-indigo-500/5">
-                        <span className="text-indigo-400 font-bold uppercase tracking-wider text-[10px] block mb-3">Key Feasibility Metrics</span>
-                        <div className="grid grid-cols-3 sm:grid-cols-9 gap-3 text-center">
-                          {Object.entries(item.scores).map(([k, v]) => (
-                            <div key={k} className="bg-indigo-950/15 border border-indigo-500/5 rounded-lg p-2.5">
-                              <span className="text-[9px] uppercase tracking-wider text-gray-500 block truncate">{k.replace(/([A-Z])/g, ' $1')}</span>
-                              <span className="text-sm font-bold text-white font-heading mt-1 block">{v.score}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-12 text-center backdrop-blur-md space-y-4">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-400">
-                    <Briefcase className="h-6 w-6" />
-                  </div>
-                  <div className="max-w-xs mx-auto space-y-1">
-                    <h4 className="text-sm font-bold text-white">No startups registered yet</h4>
-                    <p className="text-xs text-gray-500">Go through the validation process to register and track your ideas.</p>
-                  </div>
-                  <button 
-                    onClick={() => navigate('/onboarding/role')}
-                    className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-colors"
-                  >
-                    Stress-Test New Venture
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* 3. ROADMAP TAB */}
-          {activeTab === 'roadmap' && (
-            <div className="space-y-8 text-left">
-              <div>
-                <h3 className="font-heading text-xl font-bold text-white flex items-center gap-2">
-                  <Compass className="h-5 w-5 text-indigo-400" />
-                  Interactive Milestone Roadmap
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">Actionable checks and engineering timelines generated by our AI models.</p>
-              </div>
-
-              <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-12 text-center backdrop-blur-md space-y-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[#0a0a0f]/90 z-10 flex flex-col items-center justify-center space-y-4">
-                  <Construction className="h-10 w-10 text-indigo-400 animate-bounce" />
-                  <div className="max-w-xs space-y-1">
-                    <h4 className="text-sm font-bold text-white">Milestone Roadmap Module</h4>
-                    <p className="text-xs text-gray-500">This module is locked and slated for deployment in StartupXpert v2.0.</p>
-                  </div>
+              {/* Bottom CTA Button */}
+              <div className="border-t border-indigo-500/5 pt-3 mt-4 text-left">
+                {!hasValidatedStartup ? (
                   <button
-                    onClick={() => setActiveTab('overview')}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-all duration-300"
+                    onClick={() => navigate(isStep2Done ? '/startup/validate' : isStep1Done ? '/onboarding/details' : '/onboarding/role')}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 text-xs font-bold uppercase tracking-wider transition-all"
                   >
-                    Return to Overview
+                    {isStep2Done ? 'Validate Idea' : 'Continue Onboarding'}
+                    <ChevronRight className="h-4 w-4" />
                   </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 4. DOCUMENTS TAB */}
-          {activeTab === 'documents' && (
-            <div className="space-y-8 text-left">
-              <div>
-                <h3 className="font-heading text-xl font-bold text-white flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-cyan-400" />
-                  Document Repository
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">Investor pitch decks, financial sheets, and compliance documents.</p>
-              </div>
-
-              <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-12 text-center backdrop-blur-md space-y-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[#0a0a0f]/90 z-10 flex flex-col items-center justify-center space-y-4">
-                  <Construction className="h-10 w-10 text-cyan-400 animate-bounce" />
-                  <div className="max-w-xs space-y-1">
-                    <h4 className="text-sm font-bold text-white">Document Generator Module</h4>
-                    <p className="text-xs text-gray-500">Draft pitch decks and compliance forms in Version 2.0.</p>
-                  </div>
+                ) : (
                   <button
-                    onClick={() => setActiveTab('overview')}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-all"
+                    onClick={() => navigate('/roadmap')}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 text-xs font-bold uppercase tracking-wider transition-all"
                   >
-                    Return to Overview
+                    Track Milestones
+                    <ChevronRight className="h-4 w-4" />
                   </button>
-                </div>
+                )}
               </div>
             </div>
-          )}
-
-          {/* 5. SETTINGS TAB */}
-          {activeTab === 'settings' && (
-            <div className="space-y-8 text-left">
-              <div>
-                <h3 className="font-heading text-xl font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-indigo-400" />
-                  Workspace Settings
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">Configure profile and platform metrics triggers.</p>
-              </div>
-
-              <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-12 text-center backdrop-blur-md space-y-4 relative overflow-hidden">
-                <div className="absolute inset-0 bg-[#0a0a0f]/90 z-10 flex flex-col items-center justify-center space-y-4">
-                  <div className="h-10 w-10 rounded-full border border-indigo-500/20 bg-indigo-500/5 flex items-center justify-center text-indigo-400">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-                  <div className="max-w-xs space-y-1">
-                    <h4 className="text-sm font-bold text-white">Separate Settings Page Active</h4>
-                    <p className="text-xs text-gray-500">StartupXpert settings have been migrated to a dedicated panel for premium accessibility.</p>
-                  </div>
-                  <button
-                    onClick={() => navigate('/settings')}
-                    className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-all duration-300"
-                  >
-                    Open Settings Page
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 6. ANALYSIS HISTORY TAB */}
-          {activeTab === 'history' && (
-            <div className="space-y-8 text-left">
-              <div>
-                <h3 className="font-heading text-xl font-bold text-white flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-indigo-400" />
-                  Venture Stress-Test Archive
-                </h3>
-                <p className="text-xs text-gray-500 mt-1">A detailed log of all your previous startup idea stress-tests and validation scores.</p>
-              </div>
-
-              {analysisHistory.length > 0 ? (
-                <div className="space-y-4">
-                  {analysisHistory.map((item) => (
-                    <div 
-                      key={item.id}
-                      onClick={() => handleViewAnalysis(item)}
-                      className="group flex flex-col md:flex-row md:items-center justify-between p-6 rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/80 hover:border-indigo-500/30 hover:bg-indigo-950/20 transition-all duration-300 cursor-pointer relative"
-                    >
-                      <div className="space-y-2 max-w-2xl">
-                        <div className="flex items-center gap-3">
-                          <h4 className="text-base font-bold text-white group-hover:text-indigo-300 transition-colors">
-                            {item.startupName}
-                          </h4>
-                          <span className="rounded bg-indigo-950/60 border border-indigo-500/20 px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase text-indigo-400">
-                            {item.scores.marketDemand ? 'SaaS' : 'Startup Idea'}
-                          </span>
-                          <span className="text-xs text-gray-500 font-mono">{item.date}</span>
-                        </div>
-                        <p className="text-xs text-gray-400 leading-relaxed">
-                          {item.summary}
-                        </p>
-                        <div className="flex flex-wrap gap-2 pt-1">
-                          <span className="rounded bg-indigo-950 border border-indigo-500/20 px-2 py-0.5 text-3xs font-extrabold tracking-wider uppercase text-indigo-300">
-                            FEASIBILITY: {item.status}
-                          </span>
-                          <span className="rounded bg-rose-950 border border-rose-500/20 px-2 py-0.5 text-3xs font-extrabold tracking-wider uppercase text-rose-300">
-                            RISK LEVEL: {item.risk}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4 mt-4 md:mt-0 justify-end shrink-0">
-                        <button
-                          onClick={(e) => handleDeleteHistory(e, item.id)}
-                          className="h-9 w-9 flex items-center justify-center rounded-xl text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 border border-indigo-500/5 hover:border-rose-500/20 transition-all duration-300"
-                          title="Delete archived analysis"
-                          aria-label={`Delete record for ${item.startupName}`}
-                        >
-                          <Trash2 className="h-4.5 w-4.5" />
-                        </button>
-                        <span className="hidden md:flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-indigo-400 group-hover:text-white transition-colors">
-                          View Report
-                          <ChevronRight className="h-4 w-4" />
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-indigo-500/10 bg-[#0e0e16]/60 p-12 text-center backdrop-blur-md space-y-4">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-500/20 bg-indigo-500/5 text-indigo-400">
-                    <Clock className="h-6 w-6" />
-                  </div>
-                  <div className="max-w-xs mx-auto space-y-1">
-                    <h4 className="text-sm font-bold text-white">No archived records found</h4>
-                    <p className="text-xs text-gray-500">Run a stress-test to save feasibility records in your persistent archive.</p>
-                  </div>
-                  <button 
-                    onClick={() => navigate('/onboarding/role')}
-                    className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-indigo-500 transition-colors"
-                  >
-                    Validate New Concept
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+          </div>
 
         </div>
-      </main>
-    </div>
+
+      </div>
+    </DashboardLayout>
   );
 };
 

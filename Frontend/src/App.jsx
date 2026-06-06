@@ -12,6 +12,9 @@ import StartupInput from './pages/StartupInput';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Roadmap from './pages/Roadmap';
+import Documents from './pages/Documents';
+import History from './pages/History';
 import NotFound from './pages/NotFound';
 
 // New Upgrades Routing Flow
@@ -80,6 +83,30 @@ function App() {
           element={
             <ProtectedRoute>
               <Dashboard />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/roadmap" 
+          element={
+            <ProtectedRoute>
+              <Roadmap />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/documents" 
+          element={
+            <ProtectedRoute>
+              <Documents />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/history" 
+          element={
+            <ProtectedRoute>
+              <History />
             </ProtectedRoute>
           } 
         />

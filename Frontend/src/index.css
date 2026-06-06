@@ -1,27 +1,25 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "DM Sans", sans-serif;
-  --font-heading: "Syne", sans-serif;
-}
-
-/* Base resets & theme styles */
-body, aside, main, div, button, nav, header, select, input, textarea, a {
-  transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1), border-color 300ms cubic-bezier(0.4, 0, 0.2, 1), color 300ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --font-sans: "Inter", "DM Sans", sans-serif;
+  --font-heading: "Inter", sans-serif;
 }
 
 @layer base {
   body {
-    color: #f3f4f6;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', 'DM Sans', sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     overflow-x: hidden;
+    background-color: #0a0a0f;
+    color: #f1f5f9;
+    transition: background-color 0.30s ease, color 0.30s ease, border-color 0.30s ease;
   }
 }
 
-/* Theme 1 - Dark Futurism (Default) */
+/* ── Dark Theme Bodies ── */
 body.theme-dark-futurism {
   background-color: #0a0a0f;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 25%, rgba(99, 102, 241, 0.05) 0%, transparent 45%),
     radial-gradient(circle at 85% 75%, rgba(34, 211, 238, 0.05) 0%, transparent 45%),
     linear-gradient(to right, rgba(99, 102, 241, 0.015) 1px, transparent 1px),
@@ -30,20 +28,9 @@ body.theme-dark-futurism {
   background-attachment: fixed;
 }
 
-/* Theme 2 - Midnight Blue */
 body.theme-midnight-blue {
   background-color: #050b1a;
-  --color-indigo-950: #0e1f38;
-  --color-indigo-600: #1d4ed8;
-  --color-indigo-500: #3b82f6;
-  --color-indigo-400: #60a5fa;
-  --color-indigo-300: #93c5fd;
-  --color-cyan-950: #0b2545;
-  --color-cyan-500: #0284c7;
-  --color-cyan-400: #38bdf8;
-  --color-cyan-300: #7dd3fc;
-  
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 25%, rgba(59, 130, 246, 0.05) 0%, transparent 45%),
     radial-gradient(circle at 85% 75%, rgba(96, 165, 250, 0.05) 0%, transparent 45%),
     linear-gradient(to right, rgba(59, 130, 246, 0.015) 1px, transparent 1px),
@@ -52,20 +39,9 @@ body.theme-midnight-blue {
   background-attachment: fixed;
 }
 
-/* Theme 3 - Neo Emerald */
 body.theme-neo-emerald {
   background-color: #030c08;
-  --color-indigo-950: #062e1d;
-  --color-indigo-600: #059669;
-  --color-indigo-500: #10b981;
-  --color-indigo-400: #34d399;
-  --color-indigo-300: #6ee7b7;
-  --color-cyan-950: #022c22;
-  --color-cyan-500: #0d9488;
-  --color-cyan-400: #2dd4bf;
-  --color-cyan-300: #5eead4;
-  
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 25%, rgba(16, 185, 129, 0.05) 0%, transparent 45%),
     radial-gradient(circle at 85% 75%, rgba(52, 211, 153, 0.05) 0%, transparent 45%),
     linear-gradient(to right, rgba(16, 185, 129, 0.012) 1px, transparent 1px),
@@ -74,48 +50,259 @@ body.theme-neo-emerald {
   background-attachment: fixed;
 }
 
-/* Custom Scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #0a0a0f;
-}
-::-webkit-scrollbar-thumb {
-  background: #1e1e2f;
-  border-radius: 9999px;
-  border: 1px solid rgba(99, 102, 241, 0.1);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #6366f1;
-}
-
-/* Selection */
-::selection {
-  background-color: rgba(99, 102, 241, 0.3);
-  color: #ffffff;
+/* ── Theme Custom Property Declarations ── */
+body.theme-dark-futurism {
+  --color-bg: #0a0a0f;
+  --color-card: #0e0e16;
+  --color-border: rgba(99, 102, 241, 0.1);
+  --color-border-hover: rgba(99, 102, 241, 0.35);
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
+  --color-primary-glow: rgba(99, 102, 241, 0.15);
+  --color-accent: #22d3ee;
+  --color-accent-glow: rgba(34, 211, 238, 0.15);
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  
+  --react-flow-handle-bg: #6366f1;
+  --react-flow-handle-border: #0e0e16;
 }
 
-/* Smooth transitions */
-.transition-all-300 {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+body.theme-midnight-blue {
+  --color-bg: #050b1a;
+  --color-card: #0a1128;
+  --color-border: rgba(59, 130, 246, 0.12);
+  --color-border-hover: rgba(59, 130, 246, 0.35);
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-glow: rgba(59, 130, 246, 0.15);
+  --color-accent: #60a5fa;
+  --color-accent-glow: rgba(96, 165, 250, 0.15);
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --react-flow-handle-bg: #3b82f6;
+  --react-flow-handle-border: #0a1128;
 }
 
-/* Custom animations */
+body.theme-neo-emerald {
+  --color-bg: #030c08;
+  --color-card: #061810;
+  --color-border: rgba(16, 185, 129, 0.12);
+  --color-border-hover: rgba(16, 185, 129, 0.35);
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  --color-primary-glow: rgba(16, 185, 129, 0.15);
+  --color-accent: #34d399;
+  --color-accent-glow: rgba(52, 211, 153, 0.15);
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+
+  --react-flow-handle-bg: #10b981;
+  --react-flow-handle-border: #061810;
+}
+
+/* ── Global Theme Variable Mappings ── */
+
+/* 1. Base background colors */
+.bg-\[\#0a0a0f\],
+.bg-\[\#0a0a0f\]\/95,
+.bg-\[\#0a0a0f\]\/90,
+.bg-\[\#0a0a0f\]\/80,
+.bg-\[\#0a0a0f\]\/60 {
+  background-color: var(--color-bg) !important;
+}
+
+/* 2. Card background colors */
+.bg-\[\#0e0e16\],
+.bg-\[\#0e0e16\]\/95,
+.bg-\[\#0e0e16\]\/90,
+.bg-\[\#0e0e16\]\/85,
+.bg-\[\#0e0e16\]\/80,
+.bg-\[\#0e0e16\]\/60,
+.bg-\[\#0e0e16\]\/40 {
+  background-color: var(--color-card) !important;
+}
+
+/* 3. Borders */
+.border-indigo-500\/5,
+.border-indigo-500\/10,
+.border-indigo-500\/15,
+.border-indigo-500\/20,
+.border-indigo-500\/30,
+.border-indigo-500\/40,
+.border-indigo-500\/50,
+.border-cyan-500\/10,
+.border-cyan-500\/20,
+.border-blue-500\/10,
+.border-blue-500\/20,
+.border-blue-500\/30,
+.border-emerald-500\/10,
+.border-emerald-500\/20,
+.border-emerald-500\/30 {
+  border-color: var(--color-border) !important;
+}
+
+.hover\:border-indigo-500\/30:hover,
+.hover\:border-indigo-500\/35:hover,
+.hover\:border-indigo-500\/50:hover,
+.group:hover .group-hover\:border-indigo-500\/30,
+.group:hover .group-hover\:border-indigo-500\/35,
+.group:hover .group-hover\:border-indigo-500\/50 {
+  border-color: var(--color-border-hover) !important;
+}
+
+/* 4. Brand & Highlight Texts */
+.text-indigo-400,
+.text-cyan-400,
+.text-indigo-300 {
+  color: var(--color-accent) !important;
+}
+
+.text-indigo-500 {
+  color: var(--color-primary) !important;
+}
+
+.hover\:text-indigo-400:hover,
+.group:hover .group-hover\:text-indigo-400,
+.hover\:text-cyan-400:hover,
+.group:hover .group-hover\:text-cyan-400 {
+  color: var(--color-accent) !important;
+}
+
+/* 5. Buttons and Active States (primary theme colors) */
+.bg-indigo-600,
+.peer-checked\:bg-indigo-600\/30:checked ~ div,
+.peer-checked\:bg-indigo-600\/30 {
+  background-color: var(--color-primary) !important;
+}
+
+.hover\:bg-indigo-500:hover,
+.hover\:bg-indigo-700:hover {
+  background-color: var(--color-primary-hover) !important;
+}
+
+.bg-indigo-600\/10,
+.bg-indigo-600\/15,
+.bg-indigo-600\/20,
+.bg-indigo-950\/20,
+.bg-indigo-950\/10,
+.bg-indigo-950\/5,
+.bg-indigo-500\/5,
+.bg-indigo-500\/10 {
+  background-color: var(--color-primary-glow) !important;
+}
+
+.peer-checked\:after\:bg-indigo-400:checked::after,
+.peer-checked\:border-indigo-500\/40:checked {
+  border-color: var(--color-primary) !important;
+}
+
+/* 6. Form Fields & Focus Outlines */
+input:focus,
+select:focus,
+textarea:focus,
+.focus\:border-indigo-500:focus,
+.focus\:border-indigo-500\/40:focus,
+.focus\:ring-indigo-500:focus {
+  border-color: var(--color-primary) !important;
+  --tw-ring-color: var(--color-primary) !important;
+}
+
+/* 7. Drawers, Sidebar and Navbar Specifics */
+aside nav button:not(.bg-indigo-600\/15):hover {
+  background-color: var(--color-primary-glow) !important;
+  color: var(--color-accent) !important;
+}
+
+aside nav button.bg-indigo-600\/15 {
+  background-color: var(--color-primary) !important;
+  color: #ffffff !important;
+}
+
+/* 8. Toast Notifications */
+.hover\:shadow-\[0_0_20px_rgba\(99\,102\,241\,0\.15\)\]:hover {
+  box-shadow: 0 0 20px var(--color-primary-glow) !important;
+}
+
+/* 9. ReactFlow Canvas Overrides */
+.react-flow__handle {
+  background-color: var(--react-flow-handle-bg) !important;
+  border: 1px solid var(--react-flow-handle-border) !important;
+}
+
+.react-flow__controls button {
+  background-color: var(--color-bg) !important;
+  color: var(--color-text-primary) !important;
+  border-color: var(--color-border) !important;
+}
+.react-flow__controls button:hover {
+  background-color: var(--color-card) !important;
+  color: var(--color-accent) !important;
+}
+
+.react-flow__minimap {
+  background-color: var(--color-card) !important;
+  border-color: var(--color-border) !important;
+}
+.react-flow__minimap-mask {
+  fill: var(--color-bg) !important;
+  fill-opacity: 0.65 !important;
+}
+
+/* SVG Connection Paths & Flow Edges */
+.react-flow__edge-path {
+  stroke: var(--color-border-hover) !important;
+}
+.react-flow__edge-path.animated {
+  stroke: var(--color-primary) !important;
+}
+.react-flow__connection-path {
+  stroke: var(--color-primary) !important;
+}
+
+/* React Flow Marker Arrows */
+.react-flow__viewport marker path {
+  fill: var(--color-border-hover) !important;
+}
+.react-flow__viewport marker[id*="Completed"] path {
+  fill: #10b981 !important;
+}
+.react-flow__viewport marker[id*="In Progress"] path {
+  fill: var(--color-primary) !important;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar       { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-border) !important; border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-primary) !important; }
+
+/* ── Selection ── */
+::selection { background-color: var(--color-primary-glow) !important; color: #ffffff; }
+
+/* ── Animations ── */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  50%       { transform: translateY(-8px); }
+}
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-/* Custom styles for grid pattern overlay */
-.grid-glow {
-  position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.1), transparent 50%);
-  pointer-events: none;
-}
+.animate-float { animation: float 6s ease-in-out infinite; }
