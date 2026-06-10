@@ -622,7 +622,18 @@ export async function joinOrganization(inviteCode, userId, fullName, jobTitle, s
 // Get tasks assigned to a specific org member (for member dashboard)
 export async function getMemberTasks(userId) {
   if (!userId) return [];
-  // Get all org_member records for the user
+
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${ROADMAP_URL}/api/v1/tasks/member/${userId}`, { headers });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('[Roadmap API] getMemberTasks backend error, falling back to direct Supabase query:', err);
+  }
+
+  // Fallback direct query (will only work if RLS policies are updated)
   const { data: memberships } = await supabase
     .from('org_members')
     .select('id, org_id')
@@ -667,6 +678,19 @@ export async function updateTaskStatus(taskId, depStatus, completionNote) {
   const fields = { dep_status: depStatus };
   if (depStatus === 'Done') fields.completed_at = new Date().toISOString();
   if (completionNote) fields.completion_note = completionNote;
+
+  try {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${ROADMAP_URL}/api/v1/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(fields),
+    });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    console.warn('[Roadmap API] updateTaskStatus backend error, falling back to direct Supabase query:', err);
+  }
+
   const { error } = await supabase.from('roadmap_tasks').update(fields).eq('id', taskId);
   if (error) throw error;
 }

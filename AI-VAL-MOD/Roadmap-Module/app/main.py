@@ -430,3 +430,90 @@ def get_my_organization_backend(user_id: str):
         logger.error(f"Error in get_my_organization_backend: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/api/v1/tasks/member/{user_id}")
+def get_member_tasks_backend(user_id: str):
+    """Retrieve tasks assigned to a member across all startups."""
+    from shared.db.supabase_client import get_supabase
+    supabase = get_supabase()
+
+    try:
+        # 1. Get all matching org_member IDs for this user
+        members_res = supabase.table("org_members")\
+            .select("id, org_id")\
+            .eq("user_id", user_id)\
+            .execute()
+        
+        memberships = members_res.data or []
+        if not memberships:
+            return []
+        
+        member_ids = [m["id"] for m in memberships]
+
+        # 2. Fetch tasks assigned to these member IDs
+        tasks_res = supabase.table("roadmap_tasks")\
+            .select("""
+                id, task_id, title, description, timeline, priority,
+                dep_status, complexity, cost_impact, completed_at, completion_note,
+                branch_id
+            """)\
+            .in_("assigned_member_id", member_ids)\
+            .execute()
+        
+        tasks = tasks_res.data or []
+        if not tasks:
+            return []
+
+        # 3. Fetch branches and profilers to merge startup/branch names
+        branch_ids = list(set([t["branch_id"] for t in tasks if t.get("branch_id")]))
+        if not branch_ids:
+            return []
+
+        branches_res = supabase.table("roadmap_branches")\
+            .select("id, branch, session_id")\
+            .in_("id", branch_ids)\
+            .execute()
+        
+        branches = branches_res.data or []
+        session_ids = list(set([b["session_id"] for b in branches if b.get("session_id")]))
+
+        profilers_res = supabase.table("roadmap_profiler")\
+            .select("session_id, startup_name")\
+            .in_("session_id", session_ids)\
+            .execute()
+        
+        profilers = profilers_res.data or []
+        
+        # Mappings
+        branch_map = {b["id"]: b for b in branches}
+        profiler_map = {p["session_id"]: p for p in profilers}
+
+        enriched_tasks = []
+        for t in tasks:
+            bid = t.get("branch_id")
+            branch_info = branch_map.get(bid) or {}
+            sid = branch_info.get("session_id")
+            profiler_info = profiler_map.get(sid) or {}
+
+            enriched_tasks.append({
+                "id": t.get("id"),
+                "taskId": t.get("task_id"),
+                "title": t.get("title"),
+                "description": t.get("description"),
+                "timeline": t.get("timeline"),
+                "priority": t.get("priority"),
+                "status": t.get("dep_status") or "Pending",
+                "complexity": t.get("complexity"),
+                "costImpact": t.get("cost_impact"),
+                "completedAt": t.get("completed_at"),
+                "completionNote": t.get("completion_note"),
+                "branch": branch_info.get("branch", "").replace("_", " ").title() if branch_info.get("branch") else "",
+                "startupName": profiler_info.get("startup_name") or "Startup",
+                "sessionId": sid
+            })
+
+        return enriched_tasks
+    except Exception as e:
+        logger.error(f"Error in get_member_tasks_backend: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
