@@ -42,72 +42,26 @@ app = FastAPI(title="AI Startup Roadmap Generator", version="2.0.0")
 # ─── 1. STANDARD CORS MIDDLEWARE ──────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://startup-xpert.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-    ],
+    allow_origin_regex=r"https?://(localhost(:\d+)?|startup-xpert\.vercel\.app|startup-xpert-.*\.vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ─── 2. GOD-MODE CORS MIDDLEWARE (Preflight + Crash Safety) ───────────────────
-@app.middleware("http")
-async def force_cors_headers(request: Request, call_next):
-    """
-    Forces CORS headers on EVERY response — even crashes and Railway proxy drops.
-    Handles OPTIONS preflight directly so it never hits broken routes.
-    """
-    if request.method == "OPTIONS":
-        response = Response(status_code=200)
-    else:
-        try:
-            response = await call_next(request)
-        except Exception as e:
-            logger.error(f"[Middleware] Unhandled crash: {e}")
-            response = JSONResponse(status_code=500, content={"detail": str(e)})
-
-    origin = request.headers.get("origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Max-Age"] = "86400"
-    return response
-
-
 @app.exception_handler(RequestValidationError)
 async def _validation_error(request: Request, exc: RequestValidationError):
     errors = [{"field": " -> ".join(str(l) for l in e["loc"] if l != "body"), "issue": e["msg"]} for e in exc.errors()]
-    origin = request.headers.get("origin", "*")
-    cors_headers = {
-        "Access-Control-Allow-Origin": origin,
-        "Access-Control-Allow-Credentials": "true",
-        "Access-Control-Allow-Methods": "*",
-        "Access-Control-Allow-Headers": "*",
-    }
-    return JSONResponse(status_code=422, content={"status": "invalid_input", "errors": errors}, headers=cors_headers)
+    return JSONResponse(status_code=422, content={"status": "invalid_input", "errors": errors})
 
 
 @app.exception_handler(Exception)
 async def _global_error(request: Request, exc: Exception):
     """Ensure CORS headers are present even on 500 errors."""
-    origin = request.headers.get("origin", "*")
-    cors_headers = {
-        "Access-Control-Allow-Origin": origin,
-        "Access-Control-Allow-Credentials": "true",
-        "Access-Control-Allow-Methods": "*",
-        "Access-Control-Allow-Headers": "*",
-    }
     logger.exception(f"[API] Unhandled error: {exc}")
     return JSONResponse(
         status_code=500,
         content={"detail": str(exc)},
-        headers=cors_headers,
     )
 
 

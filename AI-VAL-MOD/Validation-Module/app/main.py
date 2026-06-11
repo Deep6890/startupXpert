@@ -47,75 +47,33 @@ app = FastAPI(title="AI Startup Validator", version="2.0.0", lifespan=lifespan)
 # ─── 1. STANDARD CORS MIDDLEWARE ──────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://startup-xpert.vercel.app",
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174",
-    ],
+    allow_origin_regex=r"https?://(localhost(:\d+)?|startup-xpert\.vercel\.app|startup-xpert-.*\.vercel\.app)",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ─── 2. GOD-MODE CORS MIDDLEWARE (Preflight + Crash Safety) ───────────────────
-@app.middleware("http")
-async def force_cors_headers(request: Request, call_next):
-    """
-    Forces CORS headers on EVERY response — even crashes and Railway proxy drops.
-    Handles OPTIONS preflight directly so it never reaches broken routes.
-    """
-    if request.method == "OPTIONS":
-        # Answer preflight immediately without hitting any route
-        response = Response(status_code=200)
-    else:
-        try:
-            response = await call_next(request)
-        except Exception as e:
-            logger.error(f"[Middleware] Unhandled crash: {e}")
-            response = JSONResponse(status_code=500, content={"detail": str(e)})
-
-    origin = request.headers.get("origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        response.headers["Access-Control-Max-Age"] = "86400"
-    return response
-
-
-# ─── 3. EXCEPTION HANDLERS ────────────────────────────────────────────────────
+# ─── 2. EXCEPTION HANDLERS ────────────────────────────────────────────────────
 @app.exception_handler(RequestValidationError)
 async def _validation_error(request: Request, exc: RequestValidationError):
     errors = [{"field": " -> ".join(str(l) for l in e["loc"] if l != "body"), "issue": e["msg"]} for e in exc.errors()]
-    origin = request.headers.get("origin", "*")
     return JSONResponse(
         status_code=422,
         content={"status": "invalid_input", "errors": errors},
-        headers={
-            "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": "true",
-        }
     )
 
 
 @app.exception_handler(Exception)
 async def _global_error(request: Request, exc: Exception):
     logger.exception(f"[API] Unhandled error: {exc}")
-    origin = request.headers.get("origin", "*")
     return JSONResponse(
         status_code=500,
         content={"detail": str(exc)},
-        headers={
-            "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": "true",
-        }
     )
 
 
-# ─── 4. ROUTES ────────────────────────────────────────────────────────────────
+# ─── 3. ROUTES ────────────────────────────────────────────────────────────────
 @app.get("/health")
 def health():
     return {"status": "active"}
@@ -123,8 +81,7 @@ def health():
 
 # IMPORTANT: response_model removed — Pydantic schema mismatch crash se CORS strip hota tha
 @app.post("/api/v1/validate")
-async def validate(request: Request, startup_data: StartupInput):
-    origin = request.headers.get("origin", "*")
+async def validate(startup_data: StartupInput):
     try:
         return await run_pipeline(startup_data)
     except Exception as e:
@@ -132,10 +89,6 @@ async def validate(request: Request, startup_data: StartupInput):
         return JSONResponse(
             status_code=500,
             content={"detail": str(e)},
-            headers={
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Credentials": "true",
-            }
         )
 
 
